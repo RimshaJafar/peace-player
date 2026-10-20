@@ -1,0 +1,42 @@
+workflows:
+  ios-simulator-build:
+    name: iOS Simulator Build Check
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        APIS_BASE_URL: "https://api.peaceplayer.dev"
+
+    scripts:
+      - name: Create .env file
+        script: |
+          cat > .env <<EOF
+          APIS_BASE_URL=${APIS_BASE_URL}
+          PORCUPINE_ACCESS_KEY=${PORCUPINE_ACCESS_KEY:-dummy}
+          EOF
+          echo ".env created for Codemagic build"
+          cat .env | sed 's/PORCUPINE_ACCESS_KEY=.*/PORCUPINE_ACCESS_KEY=***hidden***/'
+
+      - name: Flutter clean
+        script: flutter clean
+
+      - name: Flutter pub get
+        script: flutter pub get
+
+      - name: Install iOS pods
+        script: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: Build iOS simulator
+        script: flutter build ios --simulator --debug --no-codesign
+
+    artifacts:
+      - build/ios/iphonesimulator/*.app
+      - build/ios/iphonesimulator/*.app.dSYM
+      - /tmp/xcodebuild_logs/*.log
